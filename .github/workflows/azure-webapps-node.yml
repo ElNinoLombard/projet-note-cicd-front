@@ -1,0 +1,132 @@
+name: Build and deploy Node.js app to Azure Web App - projet-note-cicd
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build --if-present
+          npm run test --if-present
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v3
+        with:
+          name: node-app
+          path: release.zip
+
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Development'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: 'Deploy to Azure Web App - Dev Front'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'eval-git-dev-front'
+          slot-name: 'production'
+          package: .
+          publish-profile: ${{ secrets.AZURE_CREDENTIALS_DEV_FRONT }}
+      - name: Load URL
+        uses: cschleiden/replace-tokens@v1
+        with:
+          tokenPrefix: '--('
+          tokenSuffix: ')--'
+          files: '["**/*.js"]'
+        env:
+          VITE_BASE_URL : https://projet-note-cicd-dev.azurewebsites.net/v1/employee/
+
+  deploy-qualif:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Qualification'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: 'Deploy to Azure Web App - Qualif Front'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'eval-git-qualif-front'
+          slot-name: 'production'
+          package: .
+          publish-profile: ${{ secrets.AZURE_CREDENTIALS_QUALIF_FRONT }}
+      - name: Load URL
+        uses: cschleiden/replace-tokens@v1
+        with:
+          tokenPrefix: '--('
+          tokenSuffix: ')--'
+          files: '["**/*.js"]'
+        env:
+          VITE_BASE_URL : https://projet-note-cicd-qualif.azurewebsites.net/v1/employee/
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: 'Deploy to Azure Web App - Prod Front'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'eval-git-prod-front'
+          slot-name: 'production'
+          package: .
+          publish-profile: ${{ secrets.AZURE_CREDENTIALS_PROD_FRONT }}
+      - name: Load URL
+        uses: cschleiden/replace-tokens@v1
+        with:
+          tokenPrefix: '--('
+          tokenSuffix: ')--'
+          files: '["**/*.js"]'
+        env:
+          VITE_BASE_URL : https://projet-note-cicd-prod.azurewebsites.net/v1/employee/
