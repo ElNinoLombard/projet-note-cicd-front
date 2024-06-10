@@ -15,7 +15,7 @@ jobs:
 
       - name: Change directory to the frontend directory
         run: cd ProjetFront-main
-        working-directory: 'ProjetBack-main'
+        working-directory: 'ProjetFront-main'
 
       - name: Set up Node.js version
         uses: actions/setup-node@v3
@@ -28,7 +28,7 @@ jobs:
           npm install
           npm run build --if-present
           npm run test --if-present
-        working-directory: 'ProjetBack-main'
+        working-directory: 'ProjetFront-main'
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
 
